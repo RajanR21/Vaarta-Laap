@@ -2,9 +2,30 @@ import React from "react";
 import Header from "./Header";
 import Title from "../shared/Title";
 import { Drawer, Grid, Skeleton } from "@mui/material";
+import ChatList from "../specific/ChatList";
+import { samepleChats } from "../../constants/sampleData";
+import { useParams } from "react-router-dom";
+import Profile from "../specific/Profile";
 
 const AppLayout = () => (WrappedComponent) => {
+  const handleDeleteChat = (e, chatId, groupChat) => {
+    // dispatch(setIsDeleteMenu(true));
+    // dispatch(setSelectedDeleteChat({ chatId, groupChat }));
+    // deleteMenuAnchor.current = e.currentTarget;
+  };
+
   return (props) => {
+    const params = useParams();
+    // const navigate = useNavigate();
+    // const dispatch = useDispatch();
+    // const socket = getSocket();
+    const { user } = {
+      createdAt: "Thu Jul 11 2024 18:52:38 GMT+0530 (India Standard Time)",
+      username: "Lodiyu",
+    };
+
+    const chatId = params.chatId;
+    const isLoading = false;
     return (
       <>
         <Title />
@@ -19,7 +40,19 @@ const AppLayout = () => (WrappedComponent) => {
               display: { xs: "none", sm: "block" },
             }}
             height={"100%"}
-          ></Grid>
+          >
+            {isLoading ? (
+              <Skeleton />
+            ) : (
+              <ChatList
+                chats={samepleChats}
+                chatId={chatId}
+                handleDeleteChat={handleDeleteChat}
+                // newMessagesAlert={newMessagesAlert}
+                // onlineUsers={onlineUsers}
+              />
+            )}
+          </Grid>
           <Grid item xs={12} sm={8} md={5} lg={6} height={"100%"}>
             <WrappedComponent {...props} />
           </Grid>
@@ -35,10 +68,10 @@ const AppLayout = () => (WrappedComponent) => {
               bgcolor: "rgba(0,0,0,0.85)",
             }}
           >
-            {/* <Profile user={user} /> */}
+            <Profile user={user} />
           </Grid>
         </Grid>
-        <div>Footer</div>
+        {/* <div>Footer</div> */}
       </>
     );
   };
