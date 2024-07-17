@@ -27,10 +27,9 @@ const NewGroupDialog = lazy(() => import("../specific/NewGroup"));
 const Header = () => {
   const navigate = useNavigate();
 
-  const isNewGroup = false;
-
   const [isSearch, setIsSearch] = useState(false);
   const [isNotification, setIsNotification] = useState(false);
+  const [isNewGroup, setIsNewGroup] = useState(false);
 
   const openSearch = () => {
     setIsSearch((prev) => !prev);
@@ -39,6 +38,12 @@ const Header = () => {
   const openNotification = () => {
     setIsNotification((prev) => !prev);
   };
+
+  const openNewGroup = () => {
+    setIsNewGroup((prev) => !prev);
+  };
+
+  const navigateToGroup = () => navigate("/groups");
   // TODO IN HEADER
   return (
     <>
@@ -86,13 +91,13 @@ const Header = () => {
               <IconBtn
                 title={"New Group"}
                 icon={<AddIcon />}
-                // onClick={openNewGroup}
+                onClick={openNewGroup}
               />
 
               <IconBtn
                 title={"Manage Groups"}
                 icon={<GroupIcon />}
-                // onClick={navigateToGroup}
+                onClick={navigateToGroup}
               />
 
               <IconBtn
@@ -129,7 +134,7 @@ const Header = () => {
 
       {isNewGroup && (
         <Suspense fallback={<Backdrop open />}>
-          <NewGroupDialog />
+          <NewGroupDialog isNewGroup={isNewGroup} closeHandler={openNewGroup} />
         </Suspense>
       )}
     </>

@@ -19,7 +19,10 @@ const AppLayout = () => (WrappedComponent) => {
     // const navigate = useNavigate();
     // const dispatch = useDispatch();
     // const socket = getSocket();
-    const { user } = {
+
+    const user = {
+      name: "Chatless",
+      _id: "sdfsdfsdf",
       createdAt: "Thu Jul 11 2024 18:52:38 GMT+0530 (India Standard Time)",
       username: "Lodiyu",
     };
@@ -54,7 +57,7 @@ const AppLayout = () => (WrappedComponent) => {
             )}
           </Grid>
           <Grid item xs={12} sm={8} md={5} lg={6} height={"100%"}>
-            <WrappedComponent {...props} />
+            <WrappedComponent {...props} chatId={chatId} user={user} />
           </Grid>
 
           <Grid
