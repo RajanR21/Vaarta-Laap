@@ -9,15 +9,25 @@ import {
   Typography,
 } from "@mui/material";
 import React, { memo } from "react";
-import { sampleNotifications } from "../../constants/sampleData";
+import {
+  useAcceptFriendRequestMutation,
+  useGetNotificationsQuery,
+} from "../../redux/api/api";
+import { useAsyncMutation } from "../../hooks/hook";
+import { setIsNotification } from "../../redux/reducers/misc";
+import { useDispatch } from "react-redux";
 
 const Notifications = ({ isNotification, closeHandler }) => {
-  const isLoading = false;
-  const data = {
-    allRequests: sampleNotifications,
+  const { isLoading, data, error, isError } = useGetNotificationsQuery();
+  const dispatch = useDispatch();
+
+  const [acceptRequest] = useAsyncMutation(useAcceptFriendRequestMutation);
+
+  const friendRequestHandler = async ({ _id, accept }) => {
+    dispatch(setIsNotification(false));
+    await acceptRequest("Accepting...", { requestId: _id, accept });
   };
 
-  const friendRequestHandler = () => {};
   return (
     <Dialog open={isNotification} onClose={closeHandler}>
       <Stack p={{ xs: "1rem", sm: "2rem" }} maxWidth={"25rem"}>
