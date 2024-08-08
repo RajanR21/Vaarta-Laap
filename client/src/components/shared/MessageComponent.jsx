@@ -11,7 +11,7 @@ const MessageComponent = ({ message, user }) => {
   const { sender, content, attachments = [], createdAt } = message;
 
   const sameSender = sender?._id === user?._id;
-  console.log(sender);
+  // console.log(sender);
   const timeAgo = moment(createdAt).fromNow();
 
   return (
@@ -29,7 +29,7 @@ const MessageComponent = ({ message, user }) => {
     >
       {!sameSender && (
         <Typography color={lightBlue} fontWeight={"600"} variant="caption">
-          {sender.name}
+          {sender.name || "You"}
         </Typography>
       )}
 
