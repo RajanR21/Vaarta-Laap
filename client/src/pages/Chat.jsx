@@ -1,5 +1,5 @@
 import AppLayout from "../components/layout/AppLayout";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { IconButton, Skeleton, Stack } from "@mui/material";
 import { grayColor, orange } from "../constants/color";
 import MessageComponent from "../components/shared/MessageComponent";
@@ -17,6 +17,7 @@ import { useInfiniteScrollTop } from "6pp";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { setIsFileMenu } from "../redux/reducers/misc.js";
+import { removeNewMessagesAlert } from "../redux/reducers/chat.js";
 
 const Chat = ({ chatId, user }) => {
   const containerRef = useRef(null);
@@ -65,13 +66,31 @@ const Chat = ({ chatId, user }) => {
     setMessage("");
   };
 
+  useEffect(() => {
+    // socket.emit(CHAT_JOINED, { userId: user._id, members });
+    dispatch(removeNewMessagesAlert(chatId));
+
+    return () => {
+      setMessages([]);
+      setMessage("");
+      setOldMessages([]);
+      setPage(1);
+      // socket.emit(CHAT_LEAVED, { userId: user._id, members });
+    };
+  }, [chatId]);
+
   const messageOnChange = (e) => {
     setMessage((prev) => (prev = e.target.value));
   };
 
-  const newMessagesHandler = useCallback((data) => {
-    setMessages((prev) => [...prev, data.message]);
-  }, []);
+  const newMessagesHandler = useCallback(
+    (data) => {
+      if (data?.chatId !== chatId) return;
+
+      setMessages((prev) => [...prev, data.message]);
+    },
+    [chatId]
+  );
 
   const eventHandlers = { [NEW_MESSAGE]: newMessagesHandler };
 

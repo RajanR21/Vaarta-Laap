@@ -11,10 +11,11 @@ const ChatItem = ({
   groupChat = false,
   sameSender,
   isOnline,
-  newMessageAlert,
+  newMessagesAlert,
   index = 0,
   handleDeleteChat,
 }) => {
+  console.log(newMessagesAlert);
   return (
     <Link
       sx={{
@@ -41,8 +42,8 @@ const ChatItem = ({
 
         <Stack>
           <Typography>{name}</Typography>
-          {newMessageAlert && (
-            <Typography>{newMessageAlert.count} New Message</Typography>
+          {newMessagesAlert && (
+            <Typography>{newMessagesAlert.count} New Message</Typography>
           )}
         </Stack>
 
