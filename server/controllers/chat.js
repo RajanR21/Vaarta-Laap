@@ -4,6 +4,12 @@ import { Chat } from "../models/chat.js";
 import { User } from "../models/user.js";
 import { Message } from "../models/message.js";
 import { ErrorHandler } from "../utils/utility.js";
+import { emitEvent, uploadFilesToCloudinary } from "../utils/features.js";
+import {
+  NEW_MESSAGE,
+  NEW_MESSAGE_ALERT,
+  REFETCH_CHATS,
+} from "../constants/events.js";
 
 export const newGroupChat = TryCatch(async (req, res, next) => {
   const { name, members } = req.body;
@@ -17,8 +23,8 @@ export const newGroupChat = TryCatch(async (req, res, next) => {
     members: allMembers,
   });
 
-  // emitEvent(req, ALERT, allMembers, `Welcome to ${name} group`);
-  // emitEvent(req, REFETCH_CHATS, members);
+  emitEvent(req, ALERT, allMembers, `Welcome to ${name} group`);
+  emitEvent(req, REFETCH_CHATS, members);
 
   return res.status(201).json({
     success: true,
@@ -39,13 +45,14 @@ export const getMyChats = TryCatch(async (req, res, next) => {
       _id,
       groupChat,
       avatar: groupChat
-        ? members.slice(0, 3).map(({ avatar }) => avatar.url)
-        : [otherMember.avatar.url],
+        ? members.slice(0, 3).map(({ avatar }) => avatar?.url)
+        : [otherMember?.avatar?.url],
       name: groupChat ? name : otherMember.name,
       members: members.reduce((prev, curr) => {
         if (curr._id.toString() !== req.user.toString()) {
           prev.push(curr._id);
         }
+
         return prev;
       }, []),
     };
@@ -107,14 +114,14 @@ export const addMembers = TryCatch(async (req, res, next) => {
 
   const allUsersName = allNewMembers.map((i) => i.name).join(", ");
 
-  // emitEvent(
-  //   req,
-  //   ALERT,
-  //   chat.members,
-  //   `${allUsersName} has been added in the group`
-  // );
+  emitEvent(
+    req,
+    ALERT,
+    chat.members,
+    `${allUsersName} has been added in the group`
+  );
 
-  // emitEvent(req, REFETCH_CHATS, chat.members);
+  emitEvent(req, REFETCH_CHATS, chat.members);
 
   return res.status(200).json({
     success: true,
@@ -149,12 +156,12 @@ export const removeMember = TryCatch(async (req, res, next) => {
 
   await chat.save();
 
-  // emitEvent(req, ALERT, chat.members, {
-  //   message: `${userThatWillBeRemoved.name} has been removed from the group`,
-  //   chatId,
-  // });
+  emitEvent(req, ALERT, chat.members, {
+    message: `${userThatWillBeRemoved.name} has been removed from the group`,
+    chatId,
+  });
 
-  // emitEvent(req, REFETCH_CHATS, allChatMembers);
+  emitEvent(req, REFETCH_CHATS, allChatMembers);
 
   return res.status(200).json({
     success: true,
@@ -164,7 +171,6 @@ export const removeMember = TryCatch(async (req, res, next) => {
 
 export const leaveGroup = TryCatch(async (req, res, next) => {
   const chatId = req.params.id;
-  console.log(chatId);
 
   const chat = await Chat.findById(chatId);
 
@@ -193,10 +199,10 @@ export const leaveGroup = TryCatch(async (req, res, next) => {
     chat.save(),
   ]);
 
-  // emitEvent(req, ALERT, chat.members, {
-  //   chatId,
-  //   message: `User ${user.name} has left the group`,
-  // });
+  emitEvent(req, ALERT, chat.members, {
+    chatId,
+    message: `User ${user.name} has left the group`,
+  });
 
   return res.status(200).json({
     success: true,
@@ -253,7 +259,7 @@ export const renameGroup = TryCatch(async (req, res, next) => {
 
   await chat.save();
 
-  // emitEvent(req, REFETCH_CHATS, chat.members);
+  emitEvent(req, REFETCH_CHATS, chat.members);
 
   return res.status(200).json({
     success: true,
@@ -283,24 +289,24 @@ export const deleteChat = TryCatch(async (req, res, next) => {
 
   //   Here we have to dete All Messages as well as attachments or files from cloudinary
 
-  // const messagesWithAttachments = await Message.find({
-  //   chat: chatId,
-  //   attachments: { $exists: true, $ne: [] },
-  // });
+  const messagesWithAttachments = await Message.find({
+    chat: chatId,
+    attachments: { $exists: true, $ne: [] },
+  });
 
-  // const public_ids = [];
+  const public_ids = [];
 
-  // messagesWithAttachments.forEach(({ attachments }) =>
-  //   attachments.forEach(({ public_id }) => public_ids.push(public_id))
-  // );
+  messagesWithAttachments.forEach(({ attachments }) =>
+    attachments.forEach(({ public_id }) => public_ids.push(public_id))
+  );
 
-  // await Promise.all([
-  //   deletFilesFromCloudinary(public_ids),
-  //   chat.deleteOne(),
-  //   Message.deleteMany({ chat: chatId }),
-  // ]);
+  await Promise.all([
+    // deletFilesFromCloudinary(public_ids),
+    chat.deleteOne(),
+    Message.deleteMany({ chat: chatId }),
+  ]);
 
-  // // emitEvent(req, REFETCH_CHATS, members);
+  emitEvent(req, REFETCH_CHATS, members);
 
   return res.status(200).json({
     success: true,
@@ -365,11 +371,11 @@ export const sendAttachments = TryCatch(async (req, res, next) => {
     return next(new ErrorHandler("Please provide attachments", 400));
 
   //   Upload files here
-  // const attachments = await uploadFilesToCloudinary(files);
+  const attachments = await uploadFilesToCloudinary(files);
 
   const messageForDB = {
     content: "",
-    attachments: [],
+    attachments,
     sender: me._id,
     chat: chatId,
   };
@@ -384,12 +390,12 @@ export const sendAttachments = TryCatch(async (req, res, next) => {
 
   const message = await Message.create(messageForDB);
 
-  // emitEvent(req, NEW_MESSAGE, chat.members, {
-  //   message: messageForRealTime,
-  //   chatId,
-  // });
+  emitEvent(req, NEW_MESSAGE, chat.members, {
+    message: messageForRealTime,
+    chatId,
+  });
 
-  // emitEvent(req, NEW_MESSAGE_ALERT, chat.members, { chatId });
+  emitEvent(req, NEW_MESSAGE_ALERT, chat.members, { chatId });
 
   return res.status(200).json({
     success: true,
