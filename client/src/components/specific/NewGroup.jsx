@@ -12,29 +12,34 @@ import React, { useState } from "react";
 import { sampleUsers } from "../../constants/sampleData";
 import UserItem from "../shared/UserItem";
 
-// import { setIsNewGroup } from "../../redux/reducers/misc";
+import { setIsNewGroup } from "../../redux/reducers/misc";
 import toast from "react-hot-toast";
+import { useDispatch, useSelector } from "react-redux";
+import { useAsyncMutation, useErrors } from "../../hooks/hook";
+import {
+  useAvailableFriendsQuery,
+  useNewGroupMutation,
+} from "../../redux/api/api";
 
-const NewGroup = ({ isNewGroup, closeHandler }) => {
-  // const { isNewGroup } = useSelector((state) => state.misc);
-  // const dispatch = useDispatch();
+const NewGroup = () => {
+  const { isNewGroup } = useSelector((state) => state.misc);
+  const dispatch = useDispatch();
 
-  // const { isError, isLoading, error, data } = useAvailableFriendsQuery();
-  // const [newGroup, isLoadingNewGroup] = useAsyncMutation(useNewGroupMutation);
-  const isLoading = false;
+  const { isError, isLoading, error, data } = useAvailableFriendsQuery();
+  const [newGroup, isLoadingNewGroup] = useAsyncMutation(useNewGroupMutation);
 
   const groupName = useInputValidation("");
 
   const [selectedMembers, setSelectedMembers] = useState([]);
 
-  // const errors = [
-  //   {
-  //     isError,
-  //     error,
-  //   },
-  // ];
+  const errors = [
+    {
+      isError,
+      error,
+    },
+  ];
 
-  // useErrors(errors);
+  useErrors(errors);
 
   const selectMemberHandler = (id) => {
     setSelectedMembers((prev) =>
@@ -43,25 +48,24 @@ const NewGroup = ({ isNewGroup, closeHandler }) => {
         : [...prev, id]
     );
   };
-  console.log(selectedMembers);
 
   const submitHandler = () => {
-    // if (!groupName.value) return toast.error("Group name is required");
+    if (!groupName.value) return toast.error("Group name is required");
 
-    // if (selectedMembers.length < 2)
-    //   return toast.error("Please Select Atleast 3 Members");
+    if (selectedMembers.length < 2)
+      return toast.error("Please Select Atleast 3 Members");
 
-    // newGroup("Creating New Group...", {
-    //   name: groupName.value,
-    //   members: selectedMembers,
-    // });
+    newGroup("Creating New Group...", {
+      name: groupName.value,
+      members: selectedMembers,
+    });
 
     closeHandler();
   };
 
-  // const closeHandler = () => {
-  //   dispatch(setIsNewGroup(false));
-  // };
+  const closeHandler = () => {
+    dispatch(setIsNewGroup(false));
+  };
 
   return (
     <Dialog onClose={closeHandler} open={isNewGroup}>
@@ -82,7 +86,7 @@ const NewGroup = ({ isNewGroup, closeHandler }) => {
           {isLoading ? (
             <Skeleton />
           ) : (
-            sampleUsers?.map((i) => (
+            data?.friends?.map((i) => (
               <UserItem
                 user={i}
                 key={i._id}
@@ -106,7 +110,7 @@ const NewGroup = ({ isNewGroup, closeHandler }) => {
             variant="contained"
             size="large"
             onClick={submitHandler}
-            // disabled={isLoadingNewGroup}
+            disabled={isLoadingNewGroup}
           >
             Create
           </Button>

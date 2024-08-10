@@ -1,38 +1,111 @@
-import React from "react";
-import Header from "./Header";
-import Title from "../shared/Title";
 import { Drawer, Grid, Skeleton } from "@mui/material";
+import React, { useCallback, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, useParams } from "react-router-dom";
+import { useErrors, useSocketEvents } from "../../hooks/hook.jsx";
+import { useMyChatsQuery } from "../../redux/api/api.js";
+import {
+  setIsDeleteMenu,
+  setIsMobile,
+  setSelectedDeleteChat,
+} from "../../redux/reducers/misc.js";
+import {
+  NEW_MESSAGE_ALERT,
+  NEW_REQUEST,
+  ONLINE_USERS,
+  REFETCH_CHATS,
+} from "../../constants/event.js";
+import Title from "../shared/Title";
 import ChatList from "../specific/ChatList";
-import { samepleChats } from "../../constants/sampleData";
-import { useParams } from "react-router-dom";
 import Profile from "../specific/Profile";
+import Header from "./Header";
+import {
+  incrementNotification,
+  setNewMessagesAlert,
+} from "../../redux/reducers/chat.js";
+import { getSocket } from "../../socket.jsx";
+import { getOrSaveFromStorage } from "../../lib/features.js";
 
 const AppLayout = () => (WrappedComponent) => {
-  const handleDeleteChat = (e, chatId, groupChat) => {
-    // dispatch(setIsDeleteMenu(true));
-    // dispatch(setSelectedDeleteChat({ chatId, groupChat }));
-    // deleteMenuAnchor.current = e.currentTarget;
-  };
-
   return (props) => {
     const params = useParams();
-    // const navigate = useNavigate();
-    // const dispatch = useDispatch();
-    // const socket = getSocket();
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const socket = getSocket();
 
-    const user = {
-      name: "Chatless",
-      _id: "sdfsdfsdf",
-      createdAt: "Thu Jul 11 2024 18:52:38 GMT+0530 (India Standard Time)",
-      username: "Lodiyu",
+    const { isMobile } = useSelector((state) => state.misc);
+    const { user } = useSelector((state) => state.auth);
+    const { newMessagesAlert } = useSelector((state) => state.chat);
+
+    const { isLoading, data, isError, error, refetch } = useMyChatsQuery("");
+    const [onlineUsers, setOnlineUsers] = useState([]);
+
+    useErrors([{ isError, error }]);
+
+    useEffect(() => {
+      getOrSaveFromStorage({ key: NEW_MESSAGE_ALERT, value: newMessagesAlert });
+    }, [newMessagesAlert]);
+
+    const handleDeleteChat = (e, chatId, groupChat) => {
+      dispatch(setIsDeleteMenu(true));
+      dispatch(setSelectedDeleteChat({ chatId, groupChat }));
+      deleteMenuAnchor.current = e.currentTarget;
     };
 
+    const handleMobileClose = () => dispatch(setIsMobile(false));
+
     const chatId = params.chatId;
-    const isLoading = false;
+
+    const newRequestListener = useCallback(() => {
+      dispatch(incrementNotification());
+    }, [dispatch]);
+
+    const newMessageAlertListener = useCallback(
+      (data) => {
+        if (data?.chatId == chatId) return;
+
+        dispatch(setNewMessagesAlert(data));
+      },
+      [chatId]
+    );
+
+    const refetchListener = useCallback(() => {
+      refetch();
+      // navigate("/");
+    }, [refetch, navigate]);
+
+    const onlineUsersListener = useCallback((data) => {
+      setOnlineUsers(data);
+    }, []);
+
+    const eventHandlers = {
+      [NEW_MESSAGE_ALERT]: newMessageAlertListener,
+      [NEW_REQUEST]: newRequestListener,
+      [REFETCH_CHATS]: refetchListener,
+      [ONLINE_USERS]: onlineUsersListener,
+    };
+
+    useSocketEvents(socket, eventHandlers);
+
     return (
       <>
         <Title />
         <Header />
+
+        {isLoading ? (
+          <Skeleton />
+        ) : (
+          <Drawer open={isMobile} onClose={handleMobileClose}>
+            <ChatList
+              w="70vw"
+              chats={data?.chats}
+              chatId={chatId}
+              handleDeleteChat={handleDeleteChat}
+              newMessagesAlert={newMessagesAlert}
+              onlineUsers={onlineUsers}
+            />
+          </Drawer>
+        )}
 
         <Grid container height={"calc(100vh - 4rem)"}>
           <Grid
@@ -48,11 +121,11 @@ const AppLayout = () => (WrappedComponent) => {
               <Skeleton />
             ) : (
               <ChatList
-                chats={samepleChats}
+                chats={data?.chats}
                 chatId={chatId}
                 handleDeleteChat={handleDeleteChat}
-                // newMessagesAlert={newMessagesAlert}
-                // onlineUsers={onlineUsers}
+                newMessagesAlert={newMessagesAlert}
+                onlineUsers={onlineUsers}
               />
             )}
           </Grid>
