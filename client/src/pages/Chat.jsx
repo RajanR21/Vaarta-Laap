@@ -10,7 +10,6 @@ import {
 import { InputBox } from "../components/styles/StyledComponents";
 import FileMenu from "../components/dialogs/FileMenu.jsx";
 import { getSocket } from "../socket.jsx";
-import { NEW_MESSAGE } from "../../../server/constants/events.js";
 import { useChatDetailsQuery, useGetMessagesQuery } from "../redux/api/api.js";
 import { useErrors, useSocketEvents } from "../hooks/hook.jsx";
 import { useInfiniteScrollTop } from "6pp";
@@ -18,6 +17,15 @@ import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { setIsFileMenu } from "../redux/reducers/misc.js";
 import { removeNewMessagesAlert } from "../redux/reducers/chat.js";
+import { TypingLoader } from "../components/layout/Loaders.jsx";
+import {
+  NEW_MESSAGE,
+  START_TYPING,
+  STOP_TYPING,
+  ALERT,
+  CHAT_JOINED,
+  CHAT_LEAVED,
+} from "../constants/event.js";
 
 const Chat = ({ chatId, user }) => {
   const containerRef = useRef(null);
@@ -32,6 +40,10 @@ const Chat = ({ chatId, user }) => {
   const [messages, setMessages] = useState([]);
   const [page, setPage] = useState(1);
   const [fileMenuAnchor, setFileMenuAnchor] = useState(null);
+
+  const [IamTyping, setIamTyping] = useState(false);
+  const [userTyping, setUserTyping] = useState(false);
+  const typingTimeout = useRef(null);
 
   const chatDetails = useChatDetailsQuery({ chatId, skip: !chatId });
   const members = chatDetails?.data?.chat?.members;
@@ -67,7 +79,7 @@ const Chat = ({ chatId, user }) => {
   };
 
   useEffect(() => {
-    // socket.emit(CHAT_JOINED, { userId: user._id, members });
+    socket.emit(CHAT_JOINED, { userId: user._id, members });
     dispatch(removeNewMessagesAlert(chatId));
 
     return () => {
@@ -75,13 +87,29 @@ const Chat = ({ chatId, user }) => {
       setMessage("");
       setOldMessages([]);
       setPage(1);
-      // socket.emit(CHAT_LEAVED, { userId: user._id, members });
+      socket.emit(CHAT_LEAVED, { userId: user._id, members });
     };
   }, [chatId]);
 
   const messageOnChange = (e) => {
-    setMessage((prev) => (prev = e.target.value));
+    setMessage(e.target.value);
+
+    if (!IamTyping) {
+      socket.emit(START_TYPING, { members, chatId });
+      setIamTyping(true);
+    }
+
+    if (typingTimeout.current) clearTimeout(typingTimeout.current);
+
+    typingTimeout.current = setTimeout(() => {
+      socket.emit(STOP_TYPING, { members, chatId });
+      setIamTyping(false);
+    }, [2000]);
   };
+
+  useEffect(() => {
+    if (chatDetails.isError) return navigate("/");
+  }, [chatDetails.isError]);
 
   const newMessagesHandler = useCallback(
     (data) => {
@@ -92,7 +120,47 @@ const Chat = ({ chatId, user }) => {
     [chatId]
   );
 
-  const eventHandlers = { [NEW_MESSAGE]: newMessagesHandler };
+  const startTypingListener = useCallback(
+    (data) => {
+      if (data.chatId !== chatId) return;
+
+      setUserTyping(true);
+    },
+    [chatId]
+  );
+
+  const stopTypingListener = useCallback(
+    (data) => {
+      if (data.chatId !== chatId) return;
+      setUserTyping(false);
+    },
+    [chatId]
+  );
+
+  const alertListener = useCallback(
+    (data) => {
+      if (data.chatId !== chatId) return;
+      const messageForAlert = {
+        content: data.message,
+        sender: {
+          _id: "djasdhajksdhasdsadasdas",
+          name: "Admin",
+        },
+        chat: chatId,
+        createdAt: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, messageForAlert]);
+    },
+    [chatId]
+  );
+
+  const eventHandlers = {
+    [ALERT]: alertListener,
+    [NEW_MESSAGE]: newMessagesHandler,
+    [START_TYPING]: startTypingListener,
+    [STOP_TYPING]: stopTypingListener,
+  };
 
   useSocketEvents(socket, eventHandlers);
 
@@ -120,9 +188,9 @@ const Chat = ({ chatId, user }) => {
           <MessageComponent key={i._id} message={i} user={user} />
         ))}
 
-        {/* {userTyping && <TypingLoader />} */}
+        {userTyping && <TypingLoader />}
 
-        {/* <div ref={bottomRef} /> */}
+        <div ref={bottomRef} />
       </Stack>
 
       <form
